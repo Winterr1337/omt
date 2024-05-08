@@ -3,7 +3,7 @@
 
 OMT is a software program that allows to transfer data from Quartet's database to Octet's database.
 
-![omt](https://imgur.com/a/whvY5AM)
+![omt](https://i.imgur.com/LNAfaEo.png)
 
 
 ## Installation
