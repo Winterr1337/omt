@@ -1,0 +1,84 @@
+
+.root {
+    -fx-padding: 10;
+ -fx-background-color: #1e1e1f;
+}
+
+
+
+
+.label{
+ -fx-padding: 10px 0px 0px 0px;
+ -fx-text-fill: white;
+
+}
+
+
+.button {
+ -fx-background-color: #353e3d;
+ -fx-text-fill: #dad8d8;
+
+}
+
+.button: pressed {
+
+-fx-background-color: #819390;
+ -fx-text-fill: white;
+
+}
+
+
+.text-field {
+  -fx-background-color: #3d4443;
+  -fx-min-width: 128;
+  -fx-max-width: 200;
+  -fx-text-fill: #dfdfdf;
+}
+
+
+
+
+.tab-pane {
+  -fx-tab-min-width:32px;
+  -fx-tab-max-width:96px;
+  -fx-tab-min-height:26px;
+  -fx-tab-max-height:26px;
+ -fx-background-color: #1e1e1f;
+
+}
+
+.tab {
+  -fx-font-family: Cantarell;
+  -fx-font-size: 12;
+  -fx-text-base-color: #dadae6;
+  -fx-background-color: #5f7979;
+   -fx-focus-color: transparent;
+}
+
+.tab-header-background {
+    -fx-background-color: #202022;
+}
+
+.tab:selected {
+    -fx-text-base-color: #ececf5;
+  -fx-background-color: #2d2a2a;
+  -fx-border-width: 0 0 3 0;
+-fx-border-color: #336a95;
+}
+
+.check-box {
+  -fx-padding: 10px 0px 0px 0px;
+-fx-text-fill: white;
+}
+
+.list-view {
+  -fx-control-inner-background: #1e1e1f;
+}
+
+.combo-box {
+  -fx-text-base-color: #ececf5;
+  -fx-background-color: #2d2a2a;
+  -fx-control-inner-background: #1e1e1f;
+ 
+
+}
