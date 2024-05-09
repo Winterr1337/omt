@@ -10,7 +10,7 @@ OMT is a software program that allows to transfer data from Quartet's database t
 
 OpenJDK 17 or higher is required to run.
 
-Grab a release from [here.](link) Extract archive's content and run
+Grab a release from [here.]([link](https://github.com/Winterr1337/omt/releases/tag/Release)) Extract archive's content and run
 
 ```java -jar omt.jar```
 
