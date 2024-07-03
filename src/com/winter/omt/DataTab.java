@@ -1,5 +1,7 @@
 package com.winter.omt;
 
+import com.winter.omt.data.LocaleManager;
+
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
@@ -16,15 +18,15 @@ public class DataTab {
 	public DataTab() {
 
 		variableTab = new Tab();
-		variableTab.setText("Data");
+		variableTab.setText(LocaleManager.get("omt_tab_data"));
 		variableTab.setClosable(false);
 		VBox variablesVbox = new VBox();
 
-		Label labelHeader = new Label("Data");
+		Label labelHeader = new Label(LocaleManager.get("omt_tab_data"));
 		labelHeader.setStyle("-fx-font-weight: bold;");
 		variablesVbox.getChildren().add(labelHeader);
 
-		CheckBox transferVariablesCheckBox = new CheckBox("Transfer Variables");
+		CheckBox transferVariablesCheckBox = new CheckBox(LocaleManager.get("omt_tab_data_variables"));
 		transferVariablesCheckBox.setSelected(true);
 		this.transferVariables = true;
 		transferVariablesCheckBox.setOnAction(event -> {
@@ -36,25 +38,31 @@ public class DataTab {
 			}
 		});
 
-		Tooltip tooltip = new Tooltip("Check this box to transfer variables.");
+		Tooltip tooltip = new Tooltip(LocaleManager.get("omt_tab_data_variables_tooltip"));
 		transferVariablesCheckBox.setTooltip(tooltip);
 
 		variablesVbox.getChildren().add(transferVariablesCheckBox);
 
 		choiceBox = new ComboBox<>();
-		Label choiceBoxLabel = new Label("Action on existing account:");
+		Label choiceBoxLabel = new Label(LocaleManager.get("omt_tab_data_option") + " " );
 		choiceBoxLabel.setStyle("-fx-padding: 10 0 10 0;");
-		// Add items to the ComboBox
-		choiceBox.getItems().addAll("Do nothing", // 0
-				"Overwrite Octet data", // 1
-				"Ask user on each case" // 2
+		Tooltip choiceTooltip = new Tooltip(LocaleManager.get("omt_tab_data_option_tooltip"));
+		choiceBoxLabel.setTooltip(choiceTooltip);
+		
+
+		
+		choiceBox.getItems().addAll(LocaleManager.get("omt_common_donothing"), // 0
+				LocaleManager.get("omt_common_overwrite"), // 1
+				LocaleManager.get("omt_tab_data_askuser") // 2
 		);
 
-		// Set a prompt text (optional)
-		choiceBox.setPromptText("Select action");
+
+		choiceBox.setPromptText(LocaleManager.get("omt_tab_data_selectaction"));
 
 		choiceBox.getSelectionModel().select(0);
 
+		choiceBox.setTooltip(choiceTooltip);
+		
 		variablesVbox.getChildren().addAll(choiceBoxLabel, choiceBox);
 
 		variableTab.setContent(variablesVbox);

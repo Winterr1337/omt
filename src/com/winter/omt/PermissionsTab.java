@@ -1,6 +1,9 @@
 package com.winter.omt;
 
 import java.io.File;
+
+import com.winter.omt.data.LocaleManager;
+
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -32,21 +35,21 @@ public class PermissionsTab {
 		
 		
 	      permissionsTab = new Tab();
-	        permissionsTab.setText("Permissions");
+	        permissionsTab.setText(LocaleManager.get("omt_tab_permissions"));
 	        permissionsTab.setClosable(false);
 	
 			GridPane gridPane = new GridPane();
 			gridPane.setHgap(10);
 			gridPane.setVgap(10);
 
-	        Tooltip selectDBPermGroupTooltip = new Tooltip("Select a permission group from Octet's permission-groups.yml");
-			Label labelHeader = new Label("Permissions");
+	        Tooltip selectDBPermGroupTooltip = new Tooltip(LocaleManager.get("omt_tab_permissions_button_tooltip"));
+			Label labelHeader = new Label(LocaleManager.get("omt_tab_permissions"));
 			labelHeader.setStyle("-fx-font-weight: bold;");
 			gridPane.add(labelHeader, 0, 0);
 
 			
 			
-			Label permissionYmlPath = new Label("permission-groups.yml path: ");
+			Label permissionYmlPath = new Label(LocaleManager.get("omt_tab_permissions_ymlpath") + " ");
 			gridPane.add(permissionYmlPath, 0, 1);
 
 			TextField permissionYmlField = new TextField();
@@ -56,12 +59,12 @@ public class PermissionsTab {
 			gridPane.add(permissionYmlField, 0, 2);
 			
 
-			Button browseButton = new Button("Browse...");
-			ExtensionFilter dbFilter = new ExtensionFilter("Octet permission-groups.yml File", "permission-groups.yml");
+			Button browseButton = new Button(LocaleManager.get("omt_common_browse"));
+			ExtensionFilter dbFilter = new ExtensionFilter(LocaleManager.get("omt_filechooser_permissiongroupsyml"), "permission-groups.yml");
 
 			browseButton.setOnAction(e -> {
 				FileChooser fileChooser = new FileChooser();
-				fileChooser.setTitle("Select Database File");
+				fileChooser.setTitle(LocaleManager.get("omt_filechooser_permissiongroups_title"));
 				fileChooser.getExtensionFilters().add(dbFilter);
 				File selectedFile = fileChooser.showOpenDialog(primaryStage);
 				if (selectedFile != null) {
@@ -76,7 +79,7 @@ public class PermissionsTab {
 	        
 		      
 			
-			Label defaultPlayerPermissionGroupText = new Label("Default player permission group:");
+			Label defaultPlayerPermissionGroupText = new Label(LocaleManager.get("omt_tab_permissions_default_player") + " ");
 			gridPane.add(defaultPlayerPermissionGroupText, 0, 4);
 
 			defaultPlayerPermissionGroup = new TextField();
@@ -95,7 +98,7 @@ public class PermissionsTab {
 			gridPane.add(defaultPlayerPermissionGroup, 0, 5);
 	        gridPane.add(playerPermButton, 1, 5);
 	        
-			Label defaultCMPermissionGroupText = new Label("Default CM permission group:");
+			Label defaultCMPermissionGroupText = new Label(LocaleManager.get("omt_tab_permissions_default_cm") + " ");
 			gridPane.add(defaultCMPermissionGroupText, 0, 7);
 
 			defaultCMPermissionGroup = new TextField();
@@ -117,7 +120,7 @@ public class PermissionsTab {
 	        
 	      
 	        
-			Label defaultGMPermissionGroupText = new Label("Default GM permission group:");
+			Label defaultGMPermissionGroupText = new Label(LocaleManager.get("omt_tab_permissions_default_gm") + " ");
 			gridPane.add(defaultGMPermissionGroupText, 0, 10);
 
 			defaultGMPermissionGroup = new TextField();
@@ -176,7 +179,7 @@ public class PermissionsTab {
 	private void openListWindow(TextField textField) {
         Stage listStage = new Stage();
         listStage.initModality(Modality.APPLICATION_MODAL);
-        listStage.setTitle("Select permission");
+        listStage.setTitle(LocaleManager.get("omt_tab_permissions_select"));
 
 
 

@@ -8,10 +8,12 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import org.dom4j.Document;
@@ -25,6 +27,7 @@ import com.winter.omt.data.DB;
 import com.winter.omt.data.EnItem;
 import com.winter.omt.data.FieldMemoEntry;
 import com.winter.omt.data.ItemHotkey;
+import com.winter.omt.data.LocaleManager;
 import com.winter.omt.data.Locker;
 import com.winter.omt.data.LockerManager;
 import com.winter.omt.data.SkillHotkey;
@@ -44,159 +47,124 @@ import java.io.File;
 
 public class MigrateProcess {
 	private static LockerManager lockerMgr;
-	private static List<String> columns;
+	private static Set<String> columns;
 
 	public static void start(GeneralTab general, PermissionsTab permissions, DataTab data) {
-		columns = new ArrayList<String>();
+		columns = new HashSet<String>();
 		System.out.println("Quartet DB Path: " + general.getQuartetDatabasePath());
 		System.out.println("Transfering variables? " + data.transferingVariables());
 
 		String sqliteurl = "jdbc:sqlite:" + general.getQuartetDatabasePath();
-
 		boolean validId = false;
 		boolean validXml = false;
-		try {
-			Connection sqLiteConn = DriverManager.getConnection(sqliteurl);
+		DB.initBeItems();
 
+		try (Connection sqLiteConn = DriverManager.getConnection(sqliteurl)) {
 			try (PreparedStatement selectStmt = sqLiteConn
 					.prepareStatement("SELECT name FROM sqlite_master WHERE type='table' AND name='tbl_account'")) {
 				ResultSet rs = selectStmt.executeQuery();
 
 				while (rs.next()) {
-
 					if (rs.getString(1).equals("tbl_account")) {
-
 						String columnCheck = "PRAGMA table_info(" + rs.getString(1) + ")";
-
-						Statement columnCheckStatement = sqLiteConn.createStatement();
-						try (ResultSet resultSet = columnCheckStatement.executeQuery(columnCheck)) {
-
+						try (Statement columnCheckStatement = sqLiteConn.createStatement();
+								ResultSet resultSet = columnCheckStatement.executeQuery(columnCheck)) {
 							while (resultSet.next()) {
 								String columnName = resultSet.getString("name");
 								String dataType = resultSet.getString("type");
 								if (columnName.equals("id") && dataType.equals("TEXT")) {
 									validId = true;
-
 								}
 								if (columnName.equals("xml") && dataType.equals("TEXT")) {
-
 									validXml = true;
-
 								}
-
 							}
-
 						}
-
 					}
-
 				}
+			} catch (SQLException e) {
+				e.printStackTrace();
 
 			}
 
 			if (validId && validXml) {
+				try (Connection conn = Database.getConnection()) {
+					createTables(conn);
 
-				Connection conn = Database.getConnection();
-
-				createTables(conn);
-
-				if (Database.octetDatabaseExists() && data.transferVariables) {
-
-					recheckColumns(conn);
-
-				}
-
-				Statement selectXmlStmt = sqLiteConn.createStatement();
-				ResultSet rs = selectXmlStmt
-						.executeQuery("SELECT xml FROM tbl_account where id NOT NULL AND xml NOT NULL");
-
-				while (rs.next()) {
-					String xml = rs.getString(1).replace("encoding=\"UTF-16\"", "encoding=\"UTF-8\"");
-
-					SAXReader reader = new SAXReader();
-					try {
-						Document doc = reader.read(new ByteArrayInputStream(xml.getBytes()));
-
-						if (!doc.getRootElement().getName().equals("Account")) {
-
-							System.out.println("Invalid Account XML Schema. Skipping...");
-							continue;
-
-						}
-
-						Node mainNode = doc.selectSingleNode("/Account");
-
-						String accountName = mainNode.selectSingleNode("AccountID").getText();
-
-						try (PreparedStatement accCheckPs = conn
-								.prepareStatement("SELECT COUNT(*) FROM accounts WHERE username = ?")) {
-
-							accCheckPs.setString(1, accountName);
-
-							ResultSet accCount = accCheckPs.executeQuery();
-							int accountCount = 0;
-							if (accCount.next()) {
-								accountCount = accCount.getInt(1);
-							}
-
-							if (accountCount == 0) {
-
-								continueMigration(accountName, mainNode, conn, data, permissions);
-
-							} else {
-
-								switch (data.getExistingAccountOption()) {
-
-								case 0: // Ignore
-
-									continue;
-
-								case 1: // overwrite octet
-
-									deleteAccount(accountName, conn);
-									continueMigration(accountName, mainNode, conn, data, permissions);
-
-									break;
-
-								case 2: // ask user
-
-									if (askOnExistingAccount(accountName)) {
-
-										deleteAccount(accountName, conn);
-										continueMigration(accountName, mainNode, conn, data, permissions);
-
-									} else {
-
-										continue;
-
-									}
-
-									break;
-
-								}
-
-							}
-
-							accCount.close();
-
-						}
-					} catch (DocumentException e) {
-
-						e.printStackTrace();
-
-						continue;
-
+					if (data.transferVariables) {
+						recheckColumns(conn);
 					}
 
+					conn.setAutoCommit(false);
+
+					try (Statement selectXmlStmt = sqLiteConn.createStatement();
+							ResultSet rs = selectXmlStmt
+									.executeQuery("SELECT xml FROM tbl_account where id NOT NULL AND xml NOT NULL")) {
+						while (rs.next()) {
+							String xml = rs.getString(1).replace("encoding=\"UTF-16\"", "encoding=\"UTF-8\"");
+
+							SAXReader reader = new SAXReader();
+							try {
+								Document doc = reader.read(new ByteArrayInputStream(xml.getBytes()));
+
+								if (!doc.getRootElement().getName().equals("Account")) {
+									System.out.println("Invalid Account XML Schema. Skipping...");
+									continue;
+								}
+
+								Node mainNode = doc.selectSingleNode("/Account");
+								String accountName = mainNode.selectSingleNode("AccountID").getText();
+								int accountCount = 0;
+
+								try (PreparedStatement accCheckPs = conn
+										.prepareStatement("SELECT COUNT(*) FROM accounts WHERE username = ?")) {
+									accCheckPs.setString(1, accountName);
+									try (ResultSet accCount = accCheckPs.executeQuery()) {
+										if (accCount.next()) {
+											accountCount = accCount.getInt(1);
+										}
+									}
+								} catch (SQLException e) {
+									e.printStackTrace();
+								}
+
+								if (accountCount == 0) {
+									continueMigration(accountName, mainNode, conn, data, permissions);
+								} else {
+									switch (data.getExistingAccountOption()) {
+									case 0: // Ignore
+										continue;
+									case 1: // Overwrite
+										deleteAccount(accountName, conn);
+										continueMigration(accountName, mainNode, conn, data, permissions);
+										break;
+									case 2: // Ask user
+										if (askOnExistingAccount(accountName)) {
+											deleteAccount(accountName, conn);
+											continueMigration(accountName, mainNode, conn, data, permissions);
+										} else {
+											continue;
+										}
+										break;
+									}
+								}
+
+							} catch (DocumentException e) {
+								e.printStackTrace();
+								System.out.println("Invalid Account XML Schema. Skipping...");
+								continue;
+							}
+						}
+						conn.commit();
+					} catch (SQLException e) {
+						e.printStackTrace();
+					}
+				} catch (SQLException e) {
+					e.printStackTrace();
 				}
-
-				System.out.println("Migration Complete");
-
 			}
-		} catch (Exception e) {
-
+		} catch (SQLException e) {
 			e.printStackTrace();
-
 		}
 	}
 
@@ -209,15 +177,15 @@ public class MigrateProcess {
 			dialogStage.initModality(Modality.WINDOW_MODAL);
 
 			Label existingAccountText = new Label(
-					"User " + accountName + " already exists in octet's database.\nDo you want to overwrite?");
+					String.format(LocaleManager.get("omt_migrate_process_existingaccountask"), accountName));
 			existingAccountText.setAlignment(Pos.CENTER);
-			Button yesButton = new Button("Yes");
+			Button yesButton = new Button(LocaleManager.get("omt_common_yes"));
 			yesButton.setOnAction(e -> {
 				userChoiceFuture.complete(true);
 				dialogStage.close();
 			});
 
-			Button noButton = new Button("No");
+			Button noButton = new Button(LocaleManager.get("omt_common_no"));
 			noButton.setOnAction(e -> {
 				userChoiceFuture.complete(false);
 				dialogStage.close();
@@ -229,9 +197,9 @@ public class MigrateProcess {
 			VBox dialogVBox = new VBox(20, existingAccountText, buttonBox);
 			dialogVBox.setAlignment(Pos.CENTER);
 
-			Scene dialogScene = new Scene(dialogVBox, 400, 150);
+			Scene dialogScene = new Scene(dialogVBox, 450, 200);
 
-			File css = new File("style.css");
+			File css = new File("resources/style.css");
 			try {
 				if (css.exists()) {
 					dialogScene.getStylesheets().add(css.toURL().toExternalForm());
@@ -240,7 +208,7 @@ public class MigrateProcess {
 				e.printStackTrace();
 			}
 
-			dialogStage.setTitle("Existing Account Warning");
+			dialogStage.setTitle(LocaleManager.get("omt_migrate_process_existingaccountask_title"));
 			dialogStage.setScene(dialogScene);
 			dialogStage.showAndWait();
 		});
@@ -326,8 +294,6 @@ public class MigrateProcess {
 		Map<Integer, EnItem> enItems = new LinkedHashMap<Integer, EnItem>();
 		ItemHotkey[] itemHotkeys = new ItemHotkey[10];
 
-		DB.initBeItems();
-
 		lockerMgr = new LockerManager();
 
 		List<Integer> skills = new ArrayList<Integer>();
@@ -362,7 +328,7 @@ public class MigrateProcess {
 
 					if (!isVariableColumnPresent(varname)) {
 
-						addVariableColumn(varname, conn);
+						addVariableColumn(varname);
 
 					}
 
@@ -652,9 +618,9 @@ public class MigrateProcess {
 
 		int playerId = 0;
 
-		try {
+		try (Connection tempConn = Database.getConnection()) {
 
-			try (PreparedStatement insertAccPs = conn.prepareStatement(
+			try (PreparedStatement insertAccPs = tempConn.prepareStatement(
 					"INSERT INTO accounts (username, password, HasChar, lang, permissiongroup, banned) VALUES (?, ?, ?, ?, ?, ?)",
 					Statement.RETURN_GENERATED_KEYS)) {
 
@@ -679,7 +645,7 @@ public class MigrateProcess {
 
 			if (hasChar) {
 
-				try (PreparedStatement insertPlayerPs = conn.prepareStatement(
+				try (PreparedStatement insertPlayerPs = tempConn.prepareStatement(
 						"INSERT INTO players (id, charname, phone, gender, school, blood, grade, level, hp, dexlevel1, dexExp1, dexlevel2, dexExp2, dexlevel3, dexExp3, dexlevel4, dexExp4, face, hair, skin, month, day, field, x, y, respawnfield, respawnx, respawny, xp, title, taff, shoppoint, skillpoints, colortag, picket, picketcontent, headwear, upperwear, backwear, handwear, lowerwear, footwear) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ?)")) {
 
 					insertPlayerPs.setInt(1, playerId);
@@ -728,7 +694,7 @@ public class MigrateProcess {
 
 				}
 
-				try (PreparedStatement ps = conn.prepareStatement("INSERT INTO player_variables (id) VALUES (?)")) {
+				try (PreparedStatement ps = tempConn.prepareStatement("INSERT INTO player_variables (id) VALUES (?)")) {
 
 					ps.setInt(1, playerId);
 
@@ -740,7 +706,7 @@ public class MigrateProcess {
 
 					for (String varname : variables.keySet()) {
 
-						try (PreparedStatement ps = conn
+						try (PreparedStatement ps = tempConn
 								.prepareStatement("update player_variables set `" + varname + "` = ? where id = ?")) {
 							ps.setString(1, variables.get(varname));
 							ps.setInt(2, playerId);
@@ -1001,12 +967,9 @@ public class MigrateProcess {
 
 			}
 
-			conn.commit();
-
-		} catch (SQLException e) {
-
-			e.printStackTrace();
-
+		} catch (SQLException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
 		}
 
 	}
@@ -1068,7 +1031,7 @@ public class MigrateProcess {
 
 		try (Statement stmt = conn.createStatement()) {
 
-			String createAccounts = "CREATE TABLE IF NOT EXISTS accounts (id INT UNIQUE AUTO_INCREMENT NOT NULL, username VARCHAR(64) UNIQUE NOT NULL, password VARCHAR(255) NOT NULL, email VARCHAR(255), haschar BOOLEAN NOT NULL default false, lang VARCHAR(5), created TIMESTAMP DEFAULT CURRENT_TIMESTAMP, permissiongroup VARCHAR(32), muted BOOLEAN NOT NULL DEFAULT FALSE, banned BOOLEAN NOT NULL DEFAULT FALSE, mutereason TEXT DEFAULT NULL, banreason TEXT DEFAULT NULL, muteduntil TIMESTAMP, banneduntil TIMESTAMP, verified BOOLEAN, vercode VARCHAR(32), PRIMARY KEY (`id`), INDEX idx_id (id), INDEX idx_username (username) ) ENGINE=InnoDB";
+			String createAccounts = "CREATE TABLE IF NOT EXISTS accounts (id INT UNIQUE AUTO_INCREMENT NOT NULL, username VARCHAR(64) UNIQUE NOT NULL, password VARCHAR(255) NOT NULL, email VARCHAR(255), haschar BOOLEAN NOT NULL default false, lang VARCHAR(5), created TIMESTAMP DEFAULT CURRENT_TIMESTAMP, permissiongroup VARCHAR(32), muted BOOLEAN NOT NULL DEFAULT FALSE, banned BOOLEAN NOT NULL DEFAULT FALSE, mutereason TEXT DEFAULT NULL, banreason TEXT DEFAULT NULL, muteduntil TIMESTAMP, banneduntil TIMESTAMP, verified BOOLEAN, PRIMARY KEY (`id`), vercode VARCHAR(32), INDEX idx_id (id), INDEX idx_username (username) ) ENGINE=InnoDB";
 			stmt.executeUpdate(createAccounts);
 			String createPlayers = "CREATE TABLE IF NOT EXISTS players (id INT NOT NULL AUTO_INCREMENT, charname TEXT CHARACTER SET utf16, phone INT, gender INT, school INT, blood INT, face INT, hair INT, skin INT, month INT, day INT, level INT, grade INT, xp INT, dexLevel1 INT, dexExp1 INT, dexLevel2 INT, dexExp2 INT, dexLevel3 INT, dexExp3 INT, dexLevel4 INT, dexExp4 INT, TAFF INT, shoppoint INT, HP INT, field INT, x INT, y INT, headwear INT NOT NULL DEFAULT '0', upperwear INT NOT NULL DEFAULT '0', handwear INT NOT NULL DEFAULT '0', backwear INT NOT NULL DEFAULT '0', lowerwear INT NOT NULL DEFAULT '0', footwear INT NOT NULL DEFAULT '0', title INT NOT NULL DEFAULT 0, skillpoints INT NOT NULL DEFAULT 0, respawnfield INT NOT NULL DEFAULT 1, respawnx INT NOT NULL DEFAULT 80, respawny INT NOT NULL DEFAULT 70, colortag INT NOT NULL DEFAULT 1, picket BOOLEAN NOT NULL DEFAULT FALSE, picketcontent TEXT CHARACTER SET utf16, status INT NOT NULL DEFAULT 0, PRIMARY KEY (`id`), FOREIGN KEY (`id`) REFERENCES `accounts` (`id`) ON DELETE CASCADE,INDEX idx_id (id)) ENGINE=InnoDB";
 			stmt.executeUpdate(createPlayers);
@@ -1112,19 +1075,16 @@ public class MigrateProcess {
 	}
 
 	public static boolean isVariableColumnPresent(String column) {
-		if (columns.contains(column)) {
-			return true;
-		}
-		return false;
+		return columns.contains(column);
 
 	}
 
-	public static void addVariableColumn(String columnName, Connection conn) {
+	public static void addVariableColumn(String columnName) {
 
-		try (PreparedStatement ps = conn
-				.prepareStatement("alter table player_variables add column `" + columnName + "` TEXT")) {
+		try (Connection conn = Database.getConnection();
+				PreparedStatement ps = conn.prepareStatement(
+						"alter table player_variables add column `" + columnName + "` VARCHAR(128)")) {
 			ps.executeUpdate();
-			conn.commit();
 			columns.add(columnName);
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -1139,9 +1099,11 @@ public class MigrateProcess {
 			ResultSet set = stmt.executeQuery("SHOW COLUMNS FROM `player_variables`");
 
 			while (set.next()) {
+
 				columns.add(set.getString("Field"));
 
 			}
+			set.close();
 			stmt.close();
 		} catch (SQLException e) {
 

@@ -5,7 +5,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
@@ -13,20 +12,18 @@ public class Database {
 
 	public static HikariDataSource ds;
 
-
-
 	static boolean octetDatabaseExists;
 
 	public Database(String hostname, String username, String password, String dbName) throws SQLException {
 		octetDatabaseExists = false;
 
 		HikariConfig config = new HikariConfig();
-		config.setAutoCommit(false);
 		String jdbcUrl = "jdbc:mysql://" + hostname;
 		config.setDriverClassName("com.mysql.cj.jdbc.Driver");
 		config.setJdbcUrl(jdbcUrl);
 		config.setUsername(username);
 		config.setPassword(password);
+		config.setMaximumPoolSize(6);
 		ds = new HikariDataSource(config);
 
 		Connection conn = ds.getConnection();
@@ -36,7 +33,7 @@ public class Database {
 
 			String databaseName = resultSet.getString(1);
 			if (databaseName.equals(dbName)) {
-				 System.out.println("Found existing MySQL Database " + dbName);
+				System.out.println("Found existing MySQL Database " + dbName);
 				octetDatabaseExists = true;
 
 				break;
@@ -56,7 +53,6 @@ public class Database {
 		config.setJdbcUrl(jdbcUrl);
 		ds = new HikariDataSource(config);
 
-		
 	}
 
 	public static boolean octetDatabaseExists() {
@@ -75,7 +71,6 @@ public class Database {
 	public static void close() {
 
 		ds.close();
-
 
 	}
 

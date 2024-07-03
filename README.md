@@ -27,11 +27,9 @@ Provide path to Quartet's Account.db file then connect to the database. Adjust y
 
 ## Building
 
-JavaFX 21 SDK will be required to preview the application if you're going to make make changes inside an IDE.
-
 Use ```mvn clean compile package``` to build the maven project.
 
 Put the `resources` folder in the same place as the JAR file so that the CSS can load correctly.
 ## TODO
 
-- [ ] Localization
+- [ ] Star Items

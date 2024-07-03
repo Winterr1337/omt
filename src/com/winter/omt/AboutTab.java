@@ -1,5 +1,7 @@
 package com.winter.omt;
 
+import com.winter.omt.data.LocaleManager;
+
 import javafx.application.HostServices;
 import javafx.geometry.Pos;
 import javafx.scene.control.Hyperlink;
@@ -21,7 +23,7 @@ public class AboutTab {
 		aboutTab.setClosable(false);
 		VBox vbox2 = new VBox(10);
 		vbox2.setAlignment(Pos.CENTER);
-		Label label = new Label("Quartet → Octet migration tool 0.6 by Winter.");
+		Label label = new Label("Quartet → Octet migration tool 1.1 by Winter.");
 		label.setWrapText(true);
 		aboutTab.setContent(vbox2);
 		Image omtLogo = new Image(OMT.iconPath);
@@ -32,7 +34,12 @@ public class AboutTab {
 
 			hostServices.showDocument("https://octet-yg.org");
 		});
-		vbox2.getChildren().addAll(imageView, label, octetWebsite);
+		
+		Label translator = new Label(LocaleManager.get("omt_translationauthor"));
+		
+		
+		
+		vbox2.getChildren().addAll(imageView, label, octetWebsite, translator);
 
 	}
 
