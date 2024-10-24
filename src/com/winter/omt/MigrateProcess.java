@@ -8,12 +8,10 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import org.dom4j.Document;
@@ -21,6 +19,7 @@ import org.dom4j.DocumentException;
 import org.dom4j.Node;
 import org.dom4j.io.SAXReader;
 import at.favre.lib.crypto.bcrypt.BCrypt;
+
 import com.winter.omt.data.BeItem;
 import com.winter.omt.data.CoItem;
 import com.winter.omt.data.DB;
@@ -47,10 +46,8 @@ import java.io.File;
 
 public class MigrateProcess {
 	private static LockerManager lockerMgr;
-	private static Set<String> columns;
 
 	public static void start(GeneralTab general, PermissionsTab permissions, DataTab data) {
-		columns = new HashSet<String>();
 		System.out.println("Quartet DB Path: " + general.getQuartetDatabasePath());
 		System.out.println("Transfering variables? " + data.transferingVariables());
 
@@ -90,10 +87,6 @@ public class MigrateProcess {
 			if (validId && validXml) {
 				try (Connection conn = Database.getConnection()) {
 					createTables(conn);
-
-					if (data.transferVariables) {
-						recheckColumns(conn);
-					}
 
 					conn.setAutoCommit(false);
 
@@ -326,17 +319,13 @@ public class MigrateProcess {
 					String varname = variableNode.valueOf("@Key").stripTrailing();
 					variables.put(varname, variableNode.valueOf("@Value"));
 
-					if (!isVariableColumnPresent(varname)) {
-
-						addVariableColumn(varname);
-
-					}
-
 				}
 
 			}
 
 			charName = mainNode.selectSingleNode("Name").getText();
+			
+			
 			phone = Integer.parseInt(mainNode.selectSingleNode("TelNumber").getText());
 			gender = Integer.parseInt(mainNode.selectSingleNode("Sex").getText());
 			school = Integer.parseInt(mainNode.selectSingleNode("School").getText());
@@ -694,28 +683,23 @@ public class MigrateProcess {
 
 				}
 
-				try (PreparedStatement ps = tempConn.prepareStatement("INSERT INTO player_variables (id) VALUES (?)")) {
-
-					ps.setInt(1, playerId);
-
-					ps.executeUpdate();
-
-				}
-
-				if (data.transferVariables) {
+				try (PreparedStatement ps = conn.prepareStatement(
+						"INSERT INTO  player_variables (id, varname, value) VALUES (?,?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)")) {
 
 					for (String varname : variables.keySet()) {
 
-						try (PreparedStatement ps = tempConn
-								.prepareStatement("update player_variables set `" + varname + "` = ? where id = ?")) {
-							ps.setString(1, variables.get(varname));
-							ps.setInt(2, playerId);
-							ps.executeUpdate();
-						} catch (SQLException e) {
-							e.printStackTrace();
-						}
+						ps.setInt(1, playerId);
+						ps.setString(2, varname);
+						ps.setString(3, variables.get(varname));
+
+						ps.addBatch();
 
 					}
+
+					ps.executeBatch();
+
+				} catch (SQLException e) {
+					e.printStackTrace();
 				}
 
 				int newestPieceId = 0;
@@ -1035,8 +1019,8 @@ public class MigrateProcess {
 			stmt.executeUpdate(createAccounts);
 			String createPlayers = "CREATE TABLE IF NOT EXISTS players (id INT NOT NULL AUTO_INCREMENT, charname TEXT CHARACTER SET utf16, phone INT, gender INT, school INT, blood INT, face INT, hair INT, skin INT, month INT, day INT, level INT, grade INT, xp INT, dexLevel1 INT, dexExp1 INT, dexLevel2 INT, dexExp2 INT, dexLevel3 INT, dexExp3 INT, dexLevel4 INT, dexExp4 INT, TAFF INT, shoppoint INT, HP INT, field INT, x INT, y INT, headwear INT NOT NULL DEFAULT '0', upperwear INT NOT NULL DEFAULT '0', handwear INT NOT NULL DEFAULT '0', backwear INT NOT NULL DEFAULT '0', lowerwear INT NOT NULL DEFAULT '0', footwear INT NOT NULL DEFAULT '0', title INT NOT NULL DEFAULT 0, skillpoints INT NOT NULL DEFAULT 0, respawnfield INT NOT NULL DEFAULT 1, respawnx INT NOT NULL DEFAULT 80, respawny INT NOT NULL DEFAULT 70, colortag INT NOT NULL DEFAULT 1, picket BOOLEAN NOT NULL DEFAULT FALSE, picketcontent TEXT CHARACTER SET utf16, status INT NOT NULL DEFAULT 0, PRIMARY KEY (`id`), FOREIGN KEY (`id`) REFERENCES `accounts` (`id`) ON DELETE CASCADE,INDEX idx_id (id)) ENGINE=InnoDB";
 			stmt.executeUpdate(createPlayers);
-			String createVars = "CREATE TABLE IF NOT EXISTS `player_variables` (id INT NOT NULL,"
-					+ " FOREIGN KEY (`id`) REFERENCES `players` (`id`) ON DELETE CASCADE, INDEX idx_id (id)) ENGINE=InnoDB";
+			String createVars = "CREATE TABLE IF NOT EXISTS `player_variables` (id INT NOT NULL, varname VARCHAR(64), value TEXT,"
+					+ " FOREIGN KEY (`id`) REFERENCES `players` (`id`) ON DELETE CASCADE, UNIQUE KEY(id, varname), INDEX idx_id (id)) ENGINE=InnoDB";
 			stmt.executeUpdate(createVars);
 			String createBeItems = "CREATE TABLE IF NOT EXISTS player_beitems (itemid INT NOT NULL DEFAULT '0', slot1 INT NOT NULL DEFAULT '0', slot2 INT NOT NULL DEFAULT '0', slot3 INT NOT NULL DEFAULT '0', slot4 INT NOT NULL DEFAULT '0', slot5 INT NOT NULL DEFAULT '0',  pieceid INT AUTO_INCREMENT, ownerid INT NOT NULL DEFAULT '0', date_updated TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6), PRIMARY KEY (pieceid), FOREIGN KEY (ownerid) REFERENCES players (id) ON DELETE CASCADE, INDEX idx_id (ownerid)) ENGINE=InnoDB;";
 			stmt.executeUpdate(createBeItems);
@@ -1045,6 +1029,9 @@ public class MigrateProcess {
 					"CREATE TABLE IF NOT EXISTS `player_enitems` (`itemid` INT NOT NULL DEFAULT '0', `count` INT NOT NULL, `ownerid` int NOT NULL DEFAULT '0', date_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (itemid, ownerid), FOREIGN KEY (`ownerid`) REFERENCES `players` (`id`) ON DELETE CASCADE, INDEX idx_id (ownerid)) ENGINE=InnoDB");
 
 			stmt.executeUpdate(createCoItems);
+
+			String createByulBeItems = "CREATE TABLE IF NOT EXISTS player_byulbeitems (itemid INT NOT NULL DEFAULT '0', slot1 INT NOT NULL DEFAULT '0', slot2 INT NOT NULL DEFAULT '0', slot3 INT NOT NULL DEFAULT '0', slot4 INT NOT NULL DEFAULT '0', slot5 INT NOT NULL DEFAULT '0',  pieceid INT AUTO_INCREMENT, date_expire TIMESTAMP(6), ownerid INT NOT NULL DEFAULT '0', date_updated TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6), PRIMARY KEY (pieceid), FOREIGN KEY (ownerid) REFERENCES players (id) ON DELETE CASCADE, INDEX idx_id (ownerid)) ENGINE=InnoDB;";
+			stmt.executeUpdate(createByulBeItems);
 
 			String createItemHotkeys = "CREATE TABLE IF NOT EXISTS `player_itemhotkeys` (playerid INT, hotkey_index INT, itemtype INT, itemid INT, PRIMARY KEY(playerid, hotkey_index), FOREIGN KEY (playerid) REFERENCES players (id) ON DELETE CASCADE, INDEX idx_id (playerid)) ENGINE=InnoDB;";
 			stmt.executeUpdate(createItemHotkeys);
@@ -1070,44 +1057,6 @@ public class MigrateProcess {
 
 			stmt.executeUpdate(createFieldMemos);
 
-		}
-
-	}
-
-	public static boolean isVariableColumnPresent(String column) {
-		return columns.contains(column);
-
-	}
-
-	public static void addVariableColumn(String columnName) {
-
-		try (Connection conn = Database.getConnection();
-				PreparedStatement ps = conn.prepareStatement(
-						"alter table player_variables add column `" + columnName + "` VARCHAR(128)")) {
-			ps.executeUpdate();
-			columns.add(columnName);
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-
-	}
-
-	public static void recheckColumns(Connection conn) {
-		Statement stmt;
-		try {
-			stmt = conn.createStatement();
-			ResultSet set = stmt.executeQuery("SHOW COLUMNS FROM `player_variables`");
-
-			while (set.next()) {
-
-				columns.add(set.getString("Field"));
-
-			}
-			set.close();
-			stmt.close();
-		} catch (SQLException e) {
-
-			e.printStackTrace();
 		}
 
 	}
