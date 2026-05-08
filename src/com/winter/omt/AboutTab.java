@@ -23,7 +23,7 @@ public class AboutTab {
 		aboutTab.setClosable(false);
 		VBox vbox2 = new VBox(10);
 		vbox2.setAlignment(Pos.CENTER);
-		Label label = new Label("Quartet → Octet migration tool 1.1 by Winter.");
+		Label label = new Label("Quartet → Octet migration tool 1.2 by Winter.");
 		label.setWrapText(true);
 		aboutTab.setContent(vbox2);
 		Image omtLogo = new Image(OMT.iconPath);
