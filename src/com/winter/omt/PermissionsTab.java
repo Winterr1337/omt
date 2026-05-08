@@ -22,6 +22,7 @@ import javafx.stage.Stage;
 public class PermissionsTab {
 
 	Tab permissionsTab;
+	TextField permissionYmlField;
 	TextField defaultPlayerPermissionGroup;
 	TextField defaultCMPermissionGroup;
 	TextField defaultGMPermissionGroup;
@@ -52,7 +53,7 @@ public class PermissionsTab {
 			Label permissionYmlPath = new Label(LocaleManager.get("omt_tab_permissions_ymlpath") + " ");
 			gridPane.add(permissionYmlPath, 0, 1);
 
-			TextField permissionYmlField = new TextField();
+			permissionYmlField = new TextField();
 	
 			
 			
@@ -221,6 +222,30 @@ public class PermissionsTab {
     
 	public String getGMPermissionGroup() {
 		return defaultGMPermissionGroup.getText();
+	}
+
+	public String getPermissionYmlPath() {
+		return permissionYmlField.getText();
+	}
+
+	public boolean isPermissionFileConfigured() {
+		return isPermissionFileSet;
+	}
+
+	public void setPermissionYmlPath(String permissionYmlPath) {
+		permissionYmlField.setText(permissionYmlPath == null ? "" : permissionYmlPath);
+	}
+
+	public void setPlayerPermissionGroup(String permissionGroup) {
+		defaultPlayerPermissionGroup.setText(permissionGroup == null ? "" : permissionGroup);
+	}
+
+	public void setCMPermissionGroup(String permissionGroup) {
+		defaultCMPermissionGroup.setText(permissionGroup == null ? "" : permissionGroup);
+	}
+
+	public void setGMPermissionGroup(String permissionGroup) {
+		defaultGMPermissionGroup.setText(permissionGroup == null ? "" : permissionGroup);
 	}
 	
 }

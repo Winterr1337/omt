@@ -30,6 +30,9 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TabPane;
 import javafx.scene.image.Image;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -49,6 +52,7 @@ public class OMT extends Application {
 	public static LanguageTab langTab;
 	public static Stage primaryStage;
 	public static HostServices hostServices;
+	private static TabPane tabPane;
 
 	public static void start(String[] args) {
 		launch(args);
@@ -75,7 +79,7 @@ public class OMT extends Application {
 		Image icon = new Image(iconPath);
 		primaryStage.getIcons().add(icon);
 
-		TabPane tabPane = new TabPane();
+		tabPane = new TabPane();
 
 		generalTab = new GeneralTab(primaryStage);
 		permissionsTab = new PermissionsTab(primaryStage);
@@ -94,12 +98,28 @@ public class OMT extends Application {
 		if (css.exists()) {
 			scene.getStylesheets().add(css.toURL().toExternalForm());
 		}
+		scene.getAccelerators().put(new KeyCodeCombination(KeyCode.F5), OMT::refreshUI);
+		scene.getAccelerators().put(new KeyCodeCombination(KeyCode.R, KeyCombination.CONTROL_DOWN), OMT::refreshUI);
 
-		primaryStage.setWidth(500);
-		primaryStage.setHeight(500);
+		primaryStage.setWidth(525);
+		primaryStage.setHeight(600);
 		primaryStage.setResizable(false);
 		primaryStage.setScene(scene);
 		primaryStage.show();
+	}
+
+	public static void refreshUI() {
+		Platform.runLater(() -> {
+			UIState uiState = captureUIState();
+
+			clearPrimaryStage();
+			try {
+				initialize(primaryStage);
+				restoreUIState(uiState);
+			} catch (MalformedURLException e) {
+				e.printStackTrace();
+			}
+		});
 	}
 
 	public static void startMigrateProcess() {
@@ -134,6 +154,24 @@ public class OMT extends Application {
 		} catch (SQLException | PoolInitializationException e) {
 			e.printStackTrace();
 			showMysqlFailDialog(e);
+		}
+	}
+
+	public static void createSQLiteConnection(String sqlitePath) {
+
+		try {
+
+			System.out.println("SQLite Path: " + sqlitePath);
+
+			new Database(sqlitePath);
+
+			generalTab.setStatusText("Connected to SQLite database");
+
+			generalTab.updateMigrateButtonState();
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+			showSqliteFailDialog(e);
 		}
 	}
 
@@ -246,7 +284,7 @@ public class OMT extends Application {
 
 			dialogVBox.setAlignment(Pos.CENTER);
 
-			Scene dialogScene = new Scene(dialogVBox, 600, 250);
+			Scene dialogScene = new Scene(dialogVBox, 800, 250);
 
 			File css = new File("resources/style.css");
 			try {
@@ -256,7 +294,8 @@ public class OMT extends Application {
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
-
+			dialogStage.setMinWidth(600);
+			dialogStage.setMinHeight(300);
 			dialogStage.setScene(dialogScene);
 			dialogStage.showAndWait();
 		});
@@ -306,8 +345,10 @@ public class OMT extends Application {
 
 			dialogVBox.setAlignment(Pos.CENTER);
 
-			Scene dialogScene = new Scene(dialogVBox, 350, 100);
+			Scene dialogScene = new Scene(dialogVBox, 350, 300);
 
+			
+			
 			File css = new File("resources/style.css");
 			try {
 				if (css.exists()) {
@@ -316,7 +357,7 @@ public class OMT extends Application {
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
-
+			dialogStage.setMinWidth(400);
 			dialogStage.setScene(dialogScene);
 			dialogStage.showAndWait();
 		});
@@ -419,7 +460,8 @@ public class OMT extends Application {
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
-
+			dialogStage.setMinWidth(700);
+			dialogStage.setMinHeight(150);
 			dialogStage.setScene(dialogScene);
 			dialogStage.showAndWait();
 		});
@@ -453,6 +495,129 @@ public class OMT extends Application {
 		}
 		return 0;
 
+	}
+
+	private static UIState captureUIState() {
+		UIState uiState = new UIState();
+
+		if (tabPane != null) {
+			uiState.selectedTabIndex = tabPane.getSelectionModel().getSelectedIndex();
+		}
+
+		if (generalTab != null) {
+			uiState.quartetDatabasePath = generalTab.getQuartetDatabasePath();
+			uiState.accountCount = generalTab.getAccountCount();
+			uiState.migrationType = generalTab.getMigrationType();
+			uiState.mySqlHostname = generalTab.getMySQLHostname();
+			uiState.mySqlUsername = generalTab.getMySQLUsername();
+			uiState.mySqlPassword = generalTab.getMySQLPassword();
+			uiState.mySqlDatabaseName = generalTab.getMySQLDatabaseName();
+			uiState.sqlitePath = generalTab.getSQLitePath();
+			uiState.statusText = generalTab.statusLabel.getText();
+		}
+
+		if (permissionsTab != null) {
+			uiState.permissionYmlPath = permissionsTab.getPermissionYmlPath();
+			uiState.permissionFileConfigured = permissionsTab.isPermissionFileConfigured();
+			uiState.playerPermissionGroup = permissionsTab.getPlayerPermissionGroup();
+			uiState.cmPermissionGroup = permissionsTab.getCMPermissionGroup();
+			uiState.gmPermissionGroup = permissionsTab.getGMPermissionGroup();
+		}
+
+		if (dataTab != null) {
+			uiState.transferVariables = dataTab.transferingVariables();
+			uiState.existingAccountOption = dataTab.getExistingAccountOption();
+		}
+
+		return uiState;
+	}
+
+	private static void restoreUIState(UIState uiState) {
+		if (uiState == null) {
+			return;
+		}
+
+		generalTab.setQuartetDatabasePath(uiState.quartetDatabasePath);
+		generalTab.setAccountCount(uiState.accountCount);
+		generalTab.setMigrationType(uiState.migrationType);
+		generalTab.setMySQLHostname(uiState.mySqlHostname);
+		generalTab.setMySQLUsername(uiState.mySqlUsername);
+		generalTab.setMySQLPassword(uiState.mySqlPassword);
+		generalTab.setMySQLDatabaseName(uiState.mySqlDatabaseName);
+		generalTab.setSQLitePath(uiState.sqlitePath);
+
+		permissionsTab.setPermissionYmlPath(uiState.permissionYmlPath);
+		permissionsTab.setPlayerPermissionGroup(uiState.playerPermissionGroup);
+		permissionsTab.setCMPermissionGroup(uiState.cmPermissionGroup);
+		permissionsTab.setGMPermissionGroup(uiState.gmPermissionGroup);
+		if (uiState.permissionFileConfigured) {
+			permissionsTab.notifyPermissionFileSet();
+		}
+
+		dataTab.setTransferVariables(uiState.transferVariables);
+		dataTab.setExistingAccountOption(uiState.existingAccountOption);
+
+		if (uiState.statusText != null && !uiState.statusText.isBlank()) {
+			generalTab.setStatusText(uiState.statusText);
+		}
+
+		generalTab.updateMigrateButtonState();
+
+		if (tabPane != null && uiState.selectedTabIndex >= 0
+				&& uiState.selectedTabIndex < tabPane.getTabs().size()) {
+			tabPane.getSelectionModel().select(uiState.selectedTabIndex);
+		}
+	}
+
+	private static class UIState {
+		int selectedTabIndex;
+		String quartetDatabasePath;
+		int accountCount;
+		String migrationType;
+		String mySqlHostname;
+		String mySqlUsername;
+		String mySqlPassword;
+		String mySqlDatabaseName;
+		String sqlitePath;
+		String statusText;
+		String permissionYmlPath;
+		boolean permissionFileConfigured;
+		String playerPermissionGroup;
+		String cmPermissionGroup;
+		String gmPermissionGroup;
+		boolean transferVariables;
+		int existingAccountOption;
+	}
+
+	@SuppressWarnings("deprecation")
+	static void showSqliteFailDialog(Exception e) {
+		Platform.runLater(() -> {
+			Stage dialogStage = new Stage();
+			dialogStage.initModality(Modality.WINDOW_MODAL);
+
+			Label errorLabel = new Label("Failed to connect to SQLite database: " + e.getMessage());
+			Button okButton = new Button("OK");
+			okButton.setOnAction(event -> dialogStage.close());
+
+			VBox dialogVBox = new VBox(10, errorLabel, okButton);
+			dialogVBox.setAlignment(Pos.CENTER);
+
+			Scene dialogScene = new Scene(dialogVBox, 600, 300);
+
+			File css = new File("resources/style.css");
+			try {
+				if (css.exists()) {
+					dialogScene.getStylesheets().add(css.toURL().toExternalForm());
+				}
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
+			dialogStage.setMinWidth(500);
+			dialogStage.setMinHeight(300);
+		
+			dialogStage.setScene(dialogScene);
+			dialogStage.showAndWait();
+		});
 	}
 
 }

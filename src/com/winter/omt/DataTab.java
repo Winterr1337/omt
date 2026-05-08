@@ -14,6 +14,7 @@ public class DataTab {
 	Tab variableTab;
 	boolean transferVariables;
 	ComboBox<String> choiceBox;
+	CheckBox transferVariablesCheckBox;
 
 	public DataTab() {
 
@@ -26,7 +27,7 @@ public class DataTab {
 		labelHeader.setStyle("-fx-font-weight: bold;");
 		variablesVbox.getChildren().add(labelHeader);
 
-		CheckBox transferVariablesCheckBox = new CheckBox(LocaleManager.get("omt_tab_data_variables"));
+		transferVariablesCheckBox = new CheckBox(LocaleManager.get("omt_tab_data_variables"));
 		transferVariablesCheckBox.setSelected(true);
 		this.transferVariables = true;
 		transferVariablesCheckBox.setOnAction(event -> {
@@ -87,6 +88,17 @@ public class DataTab {
 
 		return choiceBox.getSelectionModel().getSelectedIndex();
 
+	}
+
+	public void setTransferVariables(boolean transferVariables) {
+		this.transferVariables = transferVariables;
+		transferVariablesCheckBox.setSelected(transferVariables);
+	}
+
+	public void setExistingAccountOption(int optionIndex) {
+		if (optionIndex >= 0 && optionIndex < choiceBox.getItems().size()) {
+			choiceBox.getSelectionModel().select(optionIndex);
+		}
 	}
 
 }

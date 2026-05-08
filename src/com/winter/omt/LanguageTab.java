@@ -115,7 +115,6 @@ public class LanguageTab {
 		if (selectedLang != this.lang) {
 
 			OMT.config.setLang(selectedLang);
-
 			OMT.clearPrimaryStage();
 			if (Database.isConnected()) {
 				
