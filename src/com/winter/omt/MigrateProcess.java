@@ -380,7 +380,7 @@ public class MigrateProcess {
 			Node beItemsNode = mainNode.selectSingleNode("BeItems");
 
 			List<Node> beItemNodes = beItemsNode.selectNodes("Item");
-			int i = 1;
+			int beItemHighestSlot = 1;
 			for (Node beItem : beItemNodes) {
 
 				int id = beItem.numberValueOf("@Type").intValue();
@@ -397,9 +397,9 @@ public class MigrateProcess {
 				item.setSlot3(new CoItem(slot3));
 				item.setSlot4(new CoItem(slot4));
 				item.setSlot5(new CoItem(slot5));
-				item.slot = i;
-				beItems.put(i, item);
-				i++;
+				item.slot = beItemHighestSlot;
+				beItems.put(beItemHighestSlot, item);
+				beItemHighestSlot++;
 
 			}
 
@@ -528,11 +528,22 @@ public class MigrateProcess {
 
 			processLocker(locker5Node, 5);
 
+			for (Locker locker : lockerMgr.lockerSlots) {
+
+				for (BeItem item : locker.beItems.values()) {
+					item.isInLocker = true;
+					item.lockerId = locker.lockerId;
+					beItems.put(beItemHighestSlot, item);
+					beItemHighestSlot++;
+				}
+
+			}
+
 			Node itemHotkeysNode = mainNode.selectSingleNode("QuickSlots");
 
 			List<Node> itemHotkeyNodes = itemHotkeysNode.selectNodes("Item");
 
-			i = 0;
+			beItemHighestSlot = 0;
 			for (Node itemHotkey : itemHotkeyNodes) {
 
 				int itemType = itemHotkey.numberValueOf("@Kind").intValue();
@@ -548,9 +559,9 @@ public class MigrateProcess {
 
 				}
 
-				itemHotkeys[i] = new ItemHotkey(itemId, itemType);
+				itemHotkeys[beItemHighestSlot] = new ItemHotkey(itemId, itemType);
 
-				i++;
+				beItemHighestSlot++;
 			}
 
 			level = Integer.parseInt(mainNode.selectSingleNode("Level").getText());
@@ -617,12 +628,11 @@ public class MigrateProcess {
 
 				insertAccPs.setString(1, accountName);
 				insertAccPs.setString(2, password);
-				insertAccPs.setInt(3, hasChar ? 1 : 0);      // was setBoolean
+				insertAccPs.setInt(3, hasChar ? 1 : 0); // was setBoolean
 				insertAccPs.setString(4, data.getDefaultLanguage());
 				insertAccPs.setString(5, authType);
-				insertAccPs.setInt(6, banned ? 1 : 0);       // was setBoolean
+				insertAccPs.setInt(6, banned ? 1 : 0); // was setBoolean
 				insertAccPs.executeUpdate();
-
 
 				ResultSet generatedKeys = insertAccPs.getGeneratedKeys();
 				if (generatedKeys.next()) {
@@ -706,10 +716,11 @@ public class MigrateProcess {
 					int newestPieceId = 0;
 
 					try (PreparedStatement upsertPlayerBeItemPs = conn.prepareStatement(Database.sql(
-							"INSERT INTO player_beitems (slot1, slot2, slot3, slot4, slot5, owner_id, item_id, piece_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE slot1 = VALUES(slot1), slot2 = VALUES(slot2), slot3 = VALUES(slot3), slot4 = VALUES(slot4), slot5 = VALUES(slot5)",
-							"INSERT INTO player_beitems (slot1, slot2, slot3, slot4, slot5, owner_id, item_id, piece_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(piece_id) DO UPDATE SET slot1 = excluded.slot1, slot2 = excluded.slot2, slot3 = excluded.slot3, slot4 = excluded.slot4, slot5 = excluded.slot5"),
+							"INSERT INTO player_beitems (slot1, slot2, slot3, slot4, slot5, owner_id, item_id, piece_id, owner_type, locker_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE slot1 = VALUES(slot1), slot2 = VALUES(slot2), slot3 = VALUES(slot3), slot4 = VALUES(slot4), slot5 = VALUES(slot5)",
+							"INSERT INTO player_beitems (slot1, slot2, slot3, slot4, slot5, owner_id, item_id, piece_id, owner_type, locker_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(piece_id) DO UPDATE SET slot1 = excluded.slot1, slot2 = excluded.slot2, slot3 = excluded.slot3, slot4 = excluded.slot4, slot5 = excluded.slot5"),
 							Statement.RETURN_GENERATED_KEYS);) {
-
+						System.out.println("BEITEMS OF"  + charName);
+						System.out.println(beItems.size());
 						for (BeItem beitem : beItems.values()) {
 							upsertPlayerBeItemPs.setInt(1, beitem.getReinforceSlotID(1));
 							upsertPlayerBeItemPs.setInt(2, beitem.getReinforceSlotID(2));
@@ -719,12 +730,25 @@ public class MigrateProcess {
 
 							upsertPlayerBeItemPs.setInt(6, playerId);
 							upsertPlayerBeItemPs.setInt(7, beitem.id);
+							
+							
+							
 							if (beitem.pieceId == 0) {
 								upsertPlayerBeItemPs.setNull(8, Types.INTEGER);
 							} else {
 								upsertPlayerBeItemPs.setInt(8, beitem.pieceId);
 							}
 
+							if (beitem.isInLocker) {
+//								System.out.println("in locker" + beitem.id);
+								upsertPlayerBeItemPs.setString(9, "LOCKER");
+								upsertPlayerBeItemPs.setInt(10, beitem.lockerId);
+							} else {
+
+								upsertPlayerBeItemPs.setString(9, "PLAYER");
+								upsertPlayerBeItemPs.setNull(10, Types.INTEGER);
+							}
+							
 							upsertPlayerBeItemPs.executeUpdate();
 
 							if (beitem.pieceId == 0) {
@@ -741,6 +765,8 @@ public class MigrateProcess {
 							}
 
 						}
+						
+						System.out.println("---");
 
 					} catch (SQLException e) {
 						e.printStackTrace();

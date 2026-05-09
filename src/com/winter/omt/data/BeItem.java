@@ -7,6 +7,7 @@ public int skillFrame;
 public int pieceId;
 public boolean removed = false;
 public boolean isInLocker = false;
+public int lockerId;
 
 	public BeItem(int id) {
 		super(id);
