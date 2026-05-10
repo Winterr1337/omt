@@ -728,9 +728,7 @@ public class MigrateProcess {
 
 							upsertPlayerBeItemPs.setInt(6, playerId);
 							upsertPlayerBeItemPs.setInt(7, beitem.id);
-							
-							
-							
+
 							if (beitem.pieceId == 0) {
 								upsertPlayerBeItemPs.setNull(8, Types.INTEGER);
 							} else {
@@ -745,7 +743,7 @@ public class MigrateProcess {
 								upsertPlayerBeItemPs.setString(9, "PLAYER");
 								upsertPlayerBeItemPs.setNull(10, Types.INTEGER);
 							}
-							
+
 							upsertPlayerBeItemPs.executeUpdate();
 
 							if (beitem.pieceId == 0) {
@@ -762,7 +760,6 @@ public class MigrateProcess {
 							}
 
 						}
-						
 
 					} catch (SQLException e) {
 						e.printStackTrace();
@@ -784,10 +781,10 @@ public class MigrateProcess {
 
 					try (PreparedStatement coips = conn.prepareStatement(Database.sql(
 							"INSERT INTO locker_coitems (item_id, count, owner_id, locker_id) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE locker_id = VALUES(locker_id), count = IF(count <> VALUES(count), VALUES(count), count)",
-							"INSERT INTO locker_coitems (item_id, count, owner_id, locker_id) VALUES (?, ?, ?, ?) ON CONFLICT(item_id, owner_id) DO UPDATE SET locker_id = excluded.locker_id, count = excluded.count"));
+							"INSERT INTO locker_coitems (item_id, count, owner_id, locker_id) VALUES (?, ?, ?, ?) ON CONFLICT(item_id, owner_id, locker_id) DO UPDATE SET count = excluded.count"));
 							PreparedStatement enips = conn.prepareStatement(Database.sql(
 									"INSERT INTO locker_enitems (item_id, count, owner_id, locker_id) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE locker_id = VALUES(locker_id), count = IF(count <> VALUES(count), VALUES(count), count)",
-									"INSERT INTO locker_enitems (item_id, count, owner_id, locker_id) VALUES (?, ?, ?, ?) ON CONFLICT(item_id, owner_id) DO UPDATE SET locker_id = excluded.locker_id, count = excluded.count"));) {
+									"INSERT INTO locker_enitems (item_id, count, owner_id, locker_id) VALUES (?, ?, ?, ?) ON CONFLICT(item_id, owner_id, locker_id) DO UPDATE SET count = excluded.count"));) {
 
 						for (Locker locker : lockerMgr.lockerSlots) {
 
@@ -818,130 +815,130 @@ public class MigrateProcess {
 
 						}
 
-					} catch (SQLException e) {
-						e.printStackTrace();
 					}
 
-					try (PreparedStatement insertCoPs = conn.prepareStatement(Database.sql(
-							"INSERT INTO player_coitems (item_id, count, owner_id) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE count = IF(count <> VALUES(count), VALUES(count), count)",
-							"INSERT INTO player_coitems (item_id, count, owner_id) VALUES (?, ?, ?) ON CONFLICT(item_id, owner_id) DO UPDATE SET count = excluded.count"));
-							PreparedStatement insertEnPs = conn.prepareStatement(Database.sql(
-									"INSERT INTO player_enitems (item_id, count, owner_id) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE count = IF(count <> VALUES(count), VALUES(count), count)",
-									"INSERT INTO player_enitems (item_id, count, owner_id) VALUES (?, ?, ?) ON CONFLICT(item_id, owner_id) DO UPDATE SET count = excluded.count"));
+				} catch (SQLException e) {
+					e.printStackTrace();
+				}
 
-					) {
+				try (PreparedStatement insertCoPs = conn.prepareStatement(Database.sql(
+						"INSERT INTO player_coitems (item_id, count, owner_id) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE count = IF(count <> VALUES(count), VALUES(count), count)",
+						"INSERT INTO player_coitems (item_id, count, owner_id) VALUES (?, ?, ?) ON CONFLICT(item_id, owner_id) DO UPDATE SET count = excluded.count"));
+						PreparedStatement insertEnPs = conn.prepareStatement(Database.sql(
+								"INSERT INTO player_enitems (item_id, count, owner_id) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE count = IF(count <> VALUES(count), VALUES(count), count)",
+								"INSERT INTO player_enitems (item_id, count, owner_id) VALUES (?, ?, ?) ON CONFLICT(item_id, owner_id) DO UPDATE SET count = excluded.count"));
 
-						for (Iterator<CoItem> iterator = coItems.values().iterator(); iterator.hasNext();) {
-							CoItem coitem = iterator.next();
-							insertCoPs.setInt(1, coitem.id);
-							insertCoPs.setInt(2, coitem.count);
-							insertCoPs.setInt(3, playerId);
-							insertCoPs.addBatch();
+				) {
 
-						}
+					for (Iterator<CoItem> iterator = coItems.values().iterator(); iterator.hasNext();) {
+						CoItem coitem = iterator.next();
+						insertCoPs.setInt(1, coitem.id);
+						insertCoPs.setInt(2, coitem.count);
+						insertCoPs.setInt(3, playerId);
+						insertCoPs.addBatch();
 
-						insertCoPs.executeBatch();
-
-						for (Iterator<EnItem> iterator = enItems.values().iterator(); iterator.hasNext();) {
-							EnItem enitem = iterator.next();
-
-							insertEnPs.setInt(1, enitem.id);
-							insertEnPs.setInt(2, enitem.count);
-							insertEnPs.setInt(3, playerId);
-							insertEnPs.addBatch();
-
-						}
-						insertEnPs.executeBatch();
-
-					} catch (SQLException e) {
-						e.printStackTrace();
 					}
 
-					try (PreparedStatement insertHotkeysPs = conn.prepareStatement(Database.sql(
-							"INSERT INTO player_itemhotkeys (player_id, hotkey_index, item_type, item_id) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE item_type = VALUES(item_type), item_id = VALUES(item_id)",
-							"INSERT INTO player_itemhotkeys (player_id, hotkey_index, item_type, item_id) VALUES (?, ?, ?, ?) ON CONFLICT(player_id, hotkey_index) DO UPDATE SET item_type = excluded.item_type, item_id = excluded.item_id"));) {
+					insertCoPs.executeBatch();
 
-						for (int i = 0; i < 10; i++) {
-							int itemid = 0;
+					for (Iterator<EnItem> iterator = enItems.values().iterator(); iterator.hasNext();) {
+						EnItem enitem = iterator.next();
 
-							ItemHotkey hotkey = itemHotkeys[i];
+						insertEnPs.setInt(1, enitem.id);
+						insertEnPs.setInt(2, enitem.count);
+						insertEnPs.setInt(3, playerId);
+						insertEnPs.addBatch();
 
-							insertHotkeysPs.setInt(1, playerId);
-							insertHotkeysPs.setInt(2, i);
+					}
+					insertEnPs.executeBatch();
 
+				} catch (SQLException e) {
+					e.printStackTrace();
+				}
+
+				try (PreparedStatement insertHotkeysPs = conn.prepareStatement(Database.sql(
+						"INSERT INTO player_itemhotkeys (player_id, hotkey_index, item_type, item_id) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE item_type = VALUES(item_type), item_id = VALUES(item_id)",
+						"INSERT INTO player_itemhotkeys (player_id, hotkey_index, item_type, item_id) VALUES (?, ?, ?, ?) ON CONFLICT(player_id, hotkey_index) DO UPDATE SET item_type = excluded.item_type, item_id = excluded.item_id"));) {
+
+					for (int i = 0; i < 10; i++) {
+						int itemid = 0;
+
+						ItemHotkey hotkey = itemHotkeys[i];
+
+						insertHotkeysPs.setInt(1, playerId);
+						insertHotkeysPs.setInt(2, i);
+
+						if (hotkey != null) {
+
+							if (hotkey.itemId != 0) {
+
+								switch (hotkey.itemType) {
+								case 2:
+									BeItem item = beItems.get(hotkey.itemId);
+									if (item != null) {
+										itemid = item.slot;
+									}
+									break;
+								case 3:
+									CoItem coitem = coItems.get(hotkey.itemId);
+									if (coitem != null) {
+										itemid = coitem.id;
+									}
+									break;
+								}
+
+								insertHotkeysPs.setInt(3, hotkey.itemType);
+								insertHotkeysPs.setInt(4, itemid);
+								insertHotkeysPs.addBatch();
+
+							}
+
+						}
+					}
+
+					insertHotkeysPs.executeBatch();
+				} catch (SQLException e) {
+					e.printStackTrace();
+				}
+
+				String insertSkills = Database.sql(
+						"INSERT INTO player_skills (player_id, skill_id) VALUES (?, ?) ON DUPLICATE KEY UPDATE skill_id = skill_id",
+						"INSERT INTO player_skills (player_id, skill_id) VALUES (?, ?) ON CONFLICT(player_id, skill_id) DO NOTHING");
+
+				try (PreparedStatement insertSkillsPs = conn.prepareStatement(insertSkills)) {
+
+					for (int skill : skills) {
+						insertSkillsPs.setInt(1, playerId);
+						insertSkillsPs.setInt(2, skill);
+						insertSkillsPs.addBatch();
+
+					}
+
+					insertSkillsPs.executeBatch();
+				} catch (SQLException e) {
+					e.printStackTrace();
+				}
+
+				try (PreparedStatement skillHotkeysInsert = conn.prepareStatement(Database.sql(
+						"INSERT INTO player_skillhotkeys (player_id, weapon_type, hotkey_index, skill_id) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE skill_id= VALUES(skill_id)",
+						"INSERT INTO player_skillhotkeys (player_id, weapon_type, hotkey_index, skill_id) VALUES (?, ?, ?, ?) ON CONFLICT(player_id, hotkey_index, weapon_type) DO UPDATE SET skill_id = excluded.skill_id"))) {
+
+					for (int i = 1; i <= 4; i++) {
+						SkillHotkey[] weaponSkillHotkeys = skillHotkeys.get(i);
+
+						for (int j = 0; j < 9; j++) {
+
+							SkillHotkey hotkey = weaponSkillHotkeys[j];
 							if (hotkey != null) {
 
-								if (hotkey.itemId != 0) {
+								if (hotkey.skillId != 0) {
 
-									switch (hotkey.itemType) {
-									case 2:
-										BeItem item = beItems.get(hotkey.itemId);
-										if (item != null) {
-											itemid = item.slot;
-										}
-										break;
-									case 3:
-										CoItem coitem = coItems.get(hotkey.itemId);
-										if (coitem != null) {
-											itemid = coitem.id;
-										}
-										break;
-									}
+									skillHotkeysInsert.setInt(1, playerId);
+									skillHotkeysInsert.setInt(2, i);
 
-									insertHotkeysPs.setInt(3, hotkey.itemType);
-									insertHotkeysPs.setInt(4, itemid);
-									insertHotkeysPs.addBatch();
-
-								}
-
-							}
-						}
-
-						insertHotkeysPs.executeBatch();
-					} catch (SQLException e) {
-						e.printStackTrace();
-					}
-
-					String insertSkills = Database.sql(
-							"INSERT INTO player_skills (player_id, skill_id) VALUES (?, ?) ON DUPLICATE KEY UPDATE skill_id = skill_id",
-							"INSERT INTO player_skills (player_id, skill_id) VALUES (?, ?) ON CONFLICT(player_id, skill_id) DO NOTHING");
-
-					try (PreparedStatement insertSkillsPs = conn.prepareStatement(insertSkills)) {
-
-						for (int skill : skills) {
-							insertSkillsPs.setInt(1, playerId);
-							insertSkillsPs.setInt(2, skill);
-							insertSkillsPs.addBatch();
-
-						}
-
-						insertSkillsPs.executeBatch();
-					} catch (SQLException e) {
-						e.printStackTrace();
-					}
-
-					try (PreparedStatement skillHotkeysInsert = conn.prepareStatement(Database.sql(
-							"INSERT INTO player_skillhotkeys (player_id, weapon_type, hotkey_index, skill_id) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE skill_id= VALUES(skill_id)",
-							"INSERT INTO player_skillhotkeys (player_id, weapon_type, hotkey_index, skill_id) VALUES (?, ?, ?, ?) ON CONFLICT(player_id, hotkey_index, weapon_type) DO UPDATE SET skill_id = excluded.skill_id"))) {
-
-						for (int i = 1; i <= 4; i++) {
-							SkillHotkey[] weaponSkillHotkeys = skillHotkeys.get(i);
-
-							for (int j = 0; j < 9; j++) {
-
-								SkillHotkey hotkey = weaponSkillHotkeys[j];
-								if (hotkey != null) {
-
-									if (hotkey.skillId != 0) {
-
-										skillHotkeysInsert.setInt(1, playerId);
-										skillHotkeysInsert.setInt(2, i);
-
-										skillHotkeysInsert.setInt(3, j);
-										skillHotkeysInsert.setInt(4, hotkey.getSkillId());
-										skillHotkeysInsert.addBatch();
-
-									}
+									skillHotkeysInsert.setInt(3, j);
+									skillHotkeysInsert.setInt(4, hotkey.getSkillId());
+									skillHotkeysInsert.addBatch();
 
 								}
 
@@ -949,40 +946,43 @@ public class MigrateProcess {
 
 						}
 
-						skillHotkeysInsert.executeBatch();
-					} catch (SQLException e) {
-						e.printStackTrace();
 					}
 
-					String insertFieldMemoSql = Database.sql(
-							"INSERT INTO player_fieldmemos(player_id, idx, field_id, x, y) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE idx = idx",
-							"INSERT INTO player_fieldmemos(player_id, idx, field_id, x, y) VALUES (?, ?, ?, ?, ?) ON CONFLICT(player_id, idx) DO NOTHING");
-
-					try (PreparedStatement insertFieldMemoPs = conn.prepareStatement(insertFieldMemoSql)) {
-
-						for (FieldMemoEntry entry : fieldMemos) {
-
-							insertFieldMemoPs.setInt(1, playerId);
-							insertFieldMemoPs.setInt(2, entry.index);
-							insertFieldMemoPs.setInt(3, entry.getFieldId());
-							insertFieldMemoPs.setInt(4, entry.getX());
-							insertFieldMemoPs.setInt(5, entry.getY());
-							insertFieldMemoPs.addBatch();
-
-						}
-
-						insertFieldMemoPs.executeBatch();
-
-					} catch (SQLException e) {
-						e.printStackTrace();
-					}
-
+					skillHotkeysInsert.executeBatch();
+				} catch (SQLException e) {
+					e.printStackTrace();
 				}
+
+				String insertFieldMemoSql = Database.sql(
+						"INSERT INTO player_fieldmemos(player_id, idx, field_id, x, y) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE idx = idx",
+						"INSERT INTO player_fieldmemos(player_id, idx, field_id, x, y) VALUES (?, ?, ?, ?, ?) ON CONFLICT(player_id, idx) DO NOTHING");
+
+				try (PreparedStatement insertFieldMemoPs = conn.prepareStatement(insertFieldMemoSql)) {
+
+					for (FieldMemoEntry entry : fieldMemos) {
+
+						insertFieldMemoPs.setInt(1, playerId);
+						insertFieldMemoPs.setInt(2, entry.index);
+						insertFieldMemoPs.setInt(3, entry.getFieldId());
+						insertFieldMemoPs.setInt(4, entry.getX());
+						insertFieldMemoPs.setInt(5, entry.getY());
+						insertFieldMemoPs.addBatch();
+
+					}
+
+					insertFieldMemoPs.executeBatch();
+
+				} catch (SQLException e) {
+					e.printStackTrace();
+				}
+
 			}
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
 	}
+
+	
 
 	private static void processLocker(Node lockerNode, int lockerId) {
 
@@ -1054,12 +1054,12 @@ public class MigrateProcess {
 					"CREATE TABLE IF NOT EXISTS accounts (id INT UNIQUE AUTO_INCREMENT NOT NULL, username VARCHAR(64) UNIQUE NOT NULL, password VARCHAR(255) NOT NULL, email VARCHAR(255), has_char BOOLEAN NOT NULL default false, lang VARCHAR(5), created TIMESTAMP DEFAULT CURRENT_TIMESTAMP, permission_group VARCHAR(32), muted BOOLEAN NOT NULL DEFAULT FALSE, banned BOOLEAN NOT NULL DEFAULT FALSE, mute_reason TEXT DEFAULT NULL, ban_reason TEXT DEFAULT NULL, muted_until TIMESTAMP NULL DEFAULT NULL, banned_until TIMESTAMP NULL DEFAULT NULL, verified BOOLEAN, PRIMARY KEY (`id`), ver_code VARCHAR(32), INDEX idx_id (id), INDEX idx_username (username) ) ENGINE=InnoDB",
 					"CREATE TABLE IF NOT EXISTS accounts (id INTEGER PRIMARY KEY, username TEXT UNIQUE NOT NULL, password TEXT NOT NULL, email TEXT, has_char INTEGER NOT NULL DEFAULT 0, lang TEXT, created TEXT DEFAULT CURRENT_TIMESTAMP, permission_group TEXT, muted INTEGER NOT NULL DEFAULT 0, banned INTEGER NOT NULL DEFAULT 0, mute_reason TEXT DEFAULT NULL, ban_reason TEXT DEFAULT NULL, muted_until TEXT DEFAULT NULL, banned_until TEXT DEFAULT NULL, verified INTEGER, ver_code TEXT)");
 			stmt.executeUpdate(createAccounts);
-			
+
 			String createClubs = Database.sql(
 					"CREATE TABLE IF NOT EXISTS clubs (id INT NOT NULL AUTO_INCREMENT, name VARCHAR(64) NOT NULL, level INT NOT NULL DEFAULT 1, score INT NOT NULL DEFAULT 0, active BOOLEAN NOT NULL DEFAULT TRUE, formation_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (id), UNIQUE KEY uniq_clubs_name (name), INDEX idx_clubs_name (name)) ENGINE=InnoDB",
 					"CREATE TABLE IF NOT EXISTS clubs (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE, level INTEGER NOT NULL DEFAULT 1, score INTEGER NOT NULL DEFAULT 0, active INTEGER NOT NULL DEFAULT 1, formation_date TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)");
 			stmt.executeUpdate(createClubs);
-			
+
 			String createPlayers = Database.sql(
 					"CREATE TABLE IF NOT EXISTS players (id INT NOT NULL AUTO_INCREMENT, char_name TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci, phone INT, gender INT, school INT, blood INT, face INT, hair INT, skin INT, month INT, day INT, level INT, grade INT, xp INT, dexLevel1 INT, dexExp1 INT, dexLevel2 INT, dexExp2 INT, dexLevel3 INT, dexExp3 INT, dexLevel4 INT, dexExp4 INT, TAFF INT, shop_point INT, HP INT, field INT, x INT, y INT, club INT DEFAULT NULL,headwear INT NOT NULL DEFAULT '0', upperwear INT NOT NULL DEFAULT '0', handwear INT NOT NULL DEFAULT '0', backwear INT NOT NULL DEFAULT '0', lowerwear INT NOT NULL DEFAULT '0', footwear INT NOT NULL DEFAULT '0', title INT NOT NULL DEFAULT 0, skill_points INT NOT NULL DEFAULT 0, respawn_field INT NOT NULL DEFAULT 1, respawn_x INT NOT NULL DEFAULT 80, respawn_y INT NOT NULL DEFAULT 70, color_tag INT NOT NULL DEFAULT 1, picket BOOLEAN NOT NULL DEFAULT FALSE, picket_content TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci, status INT NOT NULL DEFAULT 0, FOREIGN KEY (`id`) REFERENCES `accounts` (`id`) ON DELETE CASCADE, FOREIGN KEY (`club`) REFERENCES `clubs` (`id`) ON DELETE SET NULL, INDEX idx_id (id), INDEX idx_players_club_id (club)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
 					"CREATE TABLE IF NOT EXISTS players (id INTEGER PRIMARY KEY, char_name TEXT, phone INTEGER, gender INTEGER, school INTEGER, blood INTEGER, face INTEGER, hair INTEGER, skin INTEGER, month INTEGER, day INTEGER, level INTEGER, grade INTEGER, xp INTEGER, dexLevel1 INTEGER, dexExp1 INTEGER, dexLevel2 INTEGER, dexExp2 INTEGER, dexLevel3 INTEGER, dexExp3 INTEGER, dexLevel4 INTEGER, dexExp4 INTEGER, TAFF INTEGER, shop_point INTEGER, HP INTEGER, field INTEGER, x INTEGER, y INTEGER, club INTEGER DEFAULT NULL, headwear INTEGER NOT NULL DEFAULT 0, upperwear INTEGER NOT NULL DEFAULT 0, handwear INTEGER NOT NULL DEFAULT 0, backwear INTEGER NOT NULL DEFAULT 0, lowerwear INTEGER NOT NULL DEFAULT 0, footwear INTEGER NOT NULL DEFAULT 0, title INTEGER NOT NULL DEFAULT 0, skill_points INTEGER NOT NULL DEFAULT 0, respawn_field INTEGER NOT NULL DEFAULT 1, respawn_x INTEGER NOT NULL DEFAULT 80, respawn_y INTEGER NOT NULL DEFAULT 70, color_tag INTEGER NOT NULL DEFAULT 1, picket INTEGER NOT NULL DEFAULT 0, picket_content TEXT, status INTEGER NOT NULL DEFAULT 0, FOREIGN KEY (id) REFERENCES accounts(id) ON DELETE CASCADE, FOREIGN KEY (club) REFERENCES clubs(id) ON DELETE SET NULL)");
@@ -1102,20 +1102,19 @@ public class MigrateProcess {
 			stmt.executeUpdate(createPlayerSkills);
 
 			String createLockerCoItems = Database.sql(
-					"CREATE TABLE IF NOT EXISTS `locker_coitems` (`item_id` INT NOT NULL DEFAULT '0', `count` INT NOT NULL, `owner_id` int NOT NULL DEFAULT '0', locker_id INT NOT NULL, date_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (item_id, owner_id), FOREIGN KEY (`owner_id`) REFERENCES `players` (`id`) ON DELETE CASCADE, INDEX idx_id (owner_id)) ENGINE=InnoDB",
-					"CREATE TABLE IF NOT EXISTS locker_coitems (item_id INTEGER NOT NULL DEFAULT 0, count INTEGER NOT NULL, owner_id INTEGER NOT NULL DEFAULT 0, locker_id INTEGER NOT NULL, date_updated TEXT DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (item_id, owner_id), FOREIGN KEY (owner_id) REFERENCES players(id) ON DELETE CASCADE)");
+					"CREATE TABLE IF NOT EXISTS `locker_coitems` (`item_id` INT NOT NULL DEFAULT '0', `count` INT NOT NULL, `owner_id` int NOT NULL DEFAULT '0', locker_id INT NOT NULL, date_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (item_id, owner_id, locker_id), FOREIGN KEY (`owner_id`) REFERENCES `players` (`id`) ON DELETE CASCADE, INDEX idx_id (owner_id)) ENGINE=InnoDB",
+					"CREATE TABLE IF NOT EXISTS locker_coitems (item_id INTEGER NOT NULL DEFAULT 0, count INTEGER NOT NULL, owner_id INTEGER NOT NULL DEFAULT 0, locker_id INTEGER NOT NULL, date_updated TEXT DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (item_id, owner_id, locker_id), FOREIGN KEY (owner_id) REFERENCES players(id) ON DELETE CASCADE)");
 			stmt.executeUpdate(createLockerCoItems);
 
 			String createLockerEnItems = Database.sql(
-					"CREATE TABLE IF NOT EXISTS `locker_enitems` (`item_id` INT NOT NULL DEFAULT '0', `count` INT NOT NULL, `owner_id` int NOT NULL DEFAULT '0', locker_id INT NOT NULL, date_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (item_id, owner_id), FOREIGN KEY (`owner_id`) REFERENCES `players` (`id`) ON DELETE CASCADE, INDEX idx_id (owner_id)) ENGINE=InnoDB",
-					"CREATE TABLE IF NOT EXISTS locker_enitems (item_id INTEGER NOT NULL DEFAULT 0, count INTEGER NOT NULL, owner_id INTEGER NOT NULL DEFAULT 0, locker_id INTEGER NOT NULL, date_updated TEXT DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (item_id, owner_id), FOREIGN KEY (owner_id) REFERENCES players(id) ON DELETE CASCADE)");
+					"CREATE TABLE IF NOT EXISTS `locker_enitems` (`item_id` INT NOT NULL DEFAULT '0', `count` INT NOT NULL, `owner_id` int NOT NULL DEFAULT '0', locker_id INT NOT NULL, date_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (item_id, owner_id, locker_id), FOREIGN KEY (`owner_id`) REFERENCES `players` (`id`) ON DELETE CASCADE, INDEX idx_id (owner_id)) ENGINE=InnoDB",
+					"CREATE TABLE IF NOT EXISTS locker_enitems (item_id INTEGER NOT NULL DEFAULT 0, count INTEGER NOT NULL, owner_id INTEGER NOT NULL DEFAULT 0, locker_id INTEGER NOT NULL, date_updated TEXT DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (item_id, owner_id, locker_id), FOREIGN KEY (owner_id) REFERENCES players(id) ON DELETE CASCADE)");
 			stmt.executeUpdate(createLockerEnItems);
 
 			String createFieldMemos = Database.sql(
 					"CREATE TABLE IF NOT EXISTS player_fieldmemos (player_id INT NOT NULL, idx INT NOT NULL, field_id INT NOT NULL, x INT NOT NULL, y INT NOT NULL, PRIMARY KEY (player_id, idx), FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE, INDEX idx_id (player_id)) ENGINE=InnoDB;",
 					"CREATE TABLE IF NOT EXISTS player_fieldmemos (player_id INTEGER NOT NULL, idx INTEGER NOT NULL, field_id INTEGER NOT NULL, x INTEGER NOT NULL, y INTEGER NOT NULL, PRIMARY KEY (player_id, idx), FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE);");
 			stmt.executeUpdate(createFieldMemos);
-
 
 		}
 
