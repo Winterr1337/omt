@@ -719,8 +719,6 @@ public class MigrateProcess {
 							"INSERT INTO player_beitems (slot1, slot2, slot3, slot4, slot5, owner_id, item_id, piece_id, owner_type, locker_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE slot1 = VALUES(slot1), slot2 = VALUES(slot2), slot3 = VALUES(slot3), slot4 = VALUES(slot4), slot5 = VALUES(slot5)",
 							"INSERT INTO player_beitems (slot1, slot2, slot3, slot4, slot5, owner_id, item_id, piece_id, owner_type, locker_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(piece_id) DO UPDATE SET slot1 = excluded.slot1, slot2 = excluded.slot2, slot3 = excluded.slot3, slot4 = excluded.slot4, slot5 = excluded.slot5"),
 							Statement.RETURN_GENERATED_KEYS);) {
-						System.out.println("BEITEMS OF"  + charName);
-						System.out.println(beItems.size());
 						for (BeItem beitem : beItems.values()) {
 							upsertPlayerBeItemPs.setInt(1, beitem.getReinforceSlotID(1));
 							upsertPlayerBeItemPs.setInt(2, beitem.getReinforceSlotID(2));
@@ -740,7 +738,6 @@ public class MigrateProcess {
 							}
 
 							if (beitem.isInLocker) {
-//								System.out.println("in locker" + beitem.id);
 								upsertPlayerBeItemPs.setString(9, "LOCKER");
 								upsertPlayerBeItemPs.setInt(10, beitem.lockerId);
 							} else {
@@ -766,7 +763,6 @@ public class MigrateProcess {
 
 						}
 						
-						System.out.println("---");
 
 					} catch (SQLException e) {
 						e.printStackTrace();
@@ -1058,8 +1054,14 @@ public class MigrateProcess {
 					"CREATE TABLE IF NOT EXISTS accounts (id INT UNIQUE AUTO_INCREMENT NOT NULL, username VARCHAR(64) UNIQUE NOT NULL, password VARCHAR(255) NOT NULL, email VARCHAR(255), has_char BOOLEAN NOT NULL default false, lang VARCHAR(5), created TIMESTAMP DEFAULT CURRENT_TIMESTAMP, permission_group VARCHAR(32), muted BOOLEAN NOT NULL DEFAULT FALSE, banned BOOLEAN NOT NULL DEFAULT FALSE, mute_reason TEXT DEFAULT NULL, ban_reason TEXT DEFAULT NULL, muted_until TIMESTAMP NULL DEFAULT NULL, banned_until TIMESTAMP NULL DEFAULT NULL, verified BOOLEAN, PRIMARY KEY (`id`), ver_code VARCHAR(32), INDEX idx_id (id), INDEX idx_username (username) ) ENGINE=InnoDB",
 					"CREATE TABLE IF NOT EXISTS accounts (id INTEGER PRIMARY KEY, username TEXT UNIQUE NOT NULL, password TEXT NOT NULL, email TEXT, has_char INTEGER NOT NULL DEFAULT 0, lang TEXT, created TEXT DEFAULT CURRENT_TIMESTAMP, permission_group TEXT, muted INTEGER NOT NULL DEFAULT 0, banned INTEGER NOT NULL DEFAULT 0, mute_reason TEXT DEFAULT NULL, ban_reason TEXT DEFAULT NULL, muted_until TEXT DEFAULT NULL, banned_until TEXT DEFAULT NULL, verified INTEGER, ver_code TEXT)");
 			stmt.executeUpdate(createAccounts);
+			
+			String createClubs = Database.sql(
+					"CREATE TABLE IF NOT EXISTS clubs (id INT NOT NULL AUTO_INCREMENT, name VARCHAR(64) NOT NULL, level INT NOT NULL DEFAULT 1, score INT NOT NULL DEFAULT 0, active BOOLEAN NOT NULL DEFAULT TRUE, formation_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (id), UNIQUE KEY uniq_clubs_name (name), INDEX idx_clubs_name (name)) ENGINE=InnoDB",
+					"CREATE TABLE IF NOT EXISTS clubs (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE, level INTEGER NOT NULL DEFAULT 1, score INTEGER NOT NULL DEFAULT 0, active INTEGER NOT NULL DEFAULT 1, formation_date TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)");
+			stmt.executeUpdate(createClubs);
+			
 			String createPlayers = Database.sql(
-					"CREATE TABLE IF NOT EXISTS players (id INT NOT NULL AUTO_INCREMENT, char_name TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci, phone INT, gender INT, school INT, blood INT, face INT, hair INT, skin INT, month INT, day INT, level INT, grade INT, xp INT, dexLevel1 INT, dexExp1 INT, dexLevel2 INT, dexExp2 INT, dexLevel3 INT, dexExp3 INT, dexLevel4 INT, dexExp4 INT, TAFF INT, shop_point INT, HP INT, field INT, x INT, y INT, club INT DEFAULT NULL,headwear INT NOT NULL DEFAULT '0', upperwear INT NOT NULL DEFAULT '0', handwear INT NOT NULL DEFAULT '0', backwear INT NOT NULL DEFAULT '0', lowerwear INT NOT NULL DEFAULT '0', footwear INT NOT NULL DEFAULT '0', title INT NOT NULL DEFAULT 0, skill_points INT NOT NULL DEFAULT 0, respawn_field INT NOT NULL DEFAULT 1, respawn_x INT NOT NULL DEFAULT 80, respawn_y INT NOT NULL DEFAULT 70, color_tag INT NOT NULL DEFAULT 1, picket BOOLEAN NOT NULL DEFAULT FALSE, picket_content TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci, status INT NOT NULL DEFAULT 0, PRIMARY KEY (`id`), FOREIGN KEY (`id`) REFERENCES `accounts` (`id`) ON DELETE CASCADE, FOREIGN KEY (`club`) REFERENCES `clubs` (`id`) ON DELETE SET NULL, INDEX idx_id (id), INDEX idx_players_club_id (club)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+					"CREATE TABLE IF NOT EXISTS players (id INT NOT NULL AUTO_INCREMENT, char_name TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci, phone INT, gender INT, school INT, blood INT, face INT, hair INT, skin INT, month INT, day INT, level INT, grade INT, xp INT, dexLevel1 INT, dexExp1 INT, dexLevel2 INT, dexExp2 INT, dexLevel3 INT, dexExp3 INT, dexLevel4 INT, dexExp4 INT, TAFF INT, shop_point INT, HP INT, field INT, x INT, y INT, club INT DEFAULT NULL,headwear INT NOT NULL DEFAULT '0', upperwear INT NOT NULL DEFAULT '0', handwear INT NOT NULL DEFAULT '0', backwear INT NOT NULL DEFAULT '0', lowerwear INT NOT NULL DEFAULT '0', footwear INT NOT NULL DEFAULT '0', title INT NOT NULL DEFAULT 0, skill_points INT NOT NULL DEFAULT 0, respawn_field INT NOT NULL DEFAULT 1, respawn_x INT NOT NULL DEFAULT 80, respawn_y INT NOT NULL DEFAULT 70, color_tag INT NOT NULL DEFAULT 1, picket BOOLEAN NOT NULL DEFAULT FALSE, picket_content TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci, status INT NOT NULL DEFAULT 0, FOREIGN KEY (`id`) REFERENCES `accounts` (`id`) ON DELETE CASCADE, FOREIGN KEY (`club`) REFERENCES `clubs` (`id`) ON DELETE SET NULL, INDEX idx_id (id), INDEX idx_players_club_id (club)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
 					"CREATE TABLE IF NOT EXISTS players (id INTEGER PRIMARY KEY, char_name TEXT, phone INTEGER, gender INTEGER, school INTEGER, blood INTEGER, face INTEGER, hair INTEGER, skin INTEGER, month INTEGER, day INTEGER, level INTEGER, grade INTEGER, xp INTEGER, dexLevel1 INTEGER, dexExp1 INTEGER, dexLevel2 INTEGER, dexExp2 INTEGER, dexLevel3 INTEGER, dexExp3 INTEGER, dexLevel4 INTEGER, dexExp4 INTEGER, TAFF INTEGER, shop_point INTEGER, HP INTEGER, field INTEGER, x INTEGER, y INTEGER, club INTEGER DEFAULT NULL, headwear INTEGER NOT NULL DEFAULT 0, upperwear INTEGER NOT NULL DEFAULT 0, handwear INTEGER NOT NULL DEFAULT 0, backwear INTEGER NOT NULL DEFAULT 0, lowerwear INTEGER NOT NULL DEFAULT 0, footwear INTEGER NOT NULL DEFAULT 0, title INTEGER NOT NULL DEFAULT 0, skill_points INTEGER NOT NULL DEFAULT 0, respawn_field INTEGER NOT NULL DEFAULT 1, respawn_x INTEGER NOT NULL DEFAULT 80, respawn_y INTEGER NOT NULL DEFAULT 70, color_tag INTEGER NOT NULL DEFAULT 1, picket INTEGER NOT NULL DEFAULT 0, picket_content TEXT, status INTEGER NOT NULL DEFAULT 0, FOREIGN KEY (id) REFERENCES accounts(id) ON DELETE CASCADE, FOREIGN KEY (club) REFERENCES clubs(id) ON DELETE SET NULL)");
 			stmt.executeUpdate(createPlayers);
 			String createVars = Database.sql(
@@ -1114,56 +1116,6 @@ public class MigrateProcess {
 					"CREATE TABLE IF NOT EXISTS player_fieldmemos (player_id INTEGER NOT NULL, idx INTEGER NOT NULL, field_id INTEGER NOT NULL, x INTEGER NOT NULL, y INTEGER NOT NULL, PRIMARY KEY (player_id, idx), FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE);");
 			stmt.executeUpdate(createFieldMemos);
 
-			// Additional tables from Octet
-			String createClubs = Database.sql(
-					"CREATE TABLE IF NOT EXISTS clubs (id INT NOT NULL AUTO_INCREMENT, name VARCHAR(64) NOT NULL, level INT NOT NULL DEFAULT 1, score INT NOT NULL DEFAULT 0, active BOOLEAN NOT NULL DEFAULT TRUE, formation_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (id), UNIQUE KEY uniq_clubs_name (name), INDEX idx_clubs_name (name)) ENGINE=InnoDB",
-					"CREATE TABLE IF NOT EXISTS clubs (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE, level INTEGER NOT NULL DEFAULT 1, score INTEGER NOT NULL DEFAULT 0, active INTEGER NOT NULL DEFAULT 1, formation_date TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)");
-			stmt.executeUpdate(createClubs);
-
-			String createPlayerQeItems = Database.sql(
-					"CREATE TABLE IF NOT EXISTS `player_qeitems` (`item_id` INT NOT NULL DEFAULT '0', `count` INT NOT NULL, `owner_id` int NOT NULL DEFAULT '0', date_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (item_id, owner_id), FOREIGN KEY (`owner_id`) REFERENCES `players` (`id`) ON DELETE CASCADE, INDEX idx_id (owner_id)) ENGINE=InnoDB",
-					"CREATE TABLE IF NOT EXISTS player_qeitems (item_id INTEGER NOT NULL DEFAULT 0, count INTEGER NOT NULL, owner_id INTEGER NOT NULL DEFAULT 0, date_updated TEXT DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (item_id, owner_id), FOREIGN KEY (owner_id) REFERENCES players(id) ON DELETE CASCADE)");
-			stmt.executeUpdate(createPlayerQeItems);
-
-			String createPlayerQuests = Database.sql(
-					"CREATE TABLE IF NOT EXISTS player_quests (player_id INT NOT NULL, quest_id INT NOT NULL, status ENUM('ONGOING', 'COMPLETED', 'CANCELED') NOT NULL, progress JSON, date_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, PRIMARY KEY (player_id, quest_id), FOREIGN KEY (player_id) REFERENCES players (id) ON DELETE CASCADE) ENGINE=InnoDB",
-					"CREATE TABLE IF NOT EXISTS player_quests (player_id INTEGER NOT NULL, quest_id INTEGER NOT NULL, status TEXT NOT NULL, progress TEXT, date_updated TEXT DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (player_id, quest_id), FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE)");
-			stmt.executeUpdate(createPlayerQuests);
-
-			String createPlayerMemos = Database.sql(
-					"CREATE TABLE IF NOT EXISTS `player_memos` (player_id INT, memo_id INT AUTO_INCREMENT PRIMARY KEY, sender_id INT NOT NULL, sender_phone INT NOT NULL, sender_name TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci, message TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci, readed BOOLEAN NOT NULL DEFAULT TRUE, FOREIGN KEY (`player_id`) REFERENCES `players` (`id`) ON DELETE CASCADE, INDEX idx_id (player_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
-					"CREATE TABLE IF NOT EXISTS player_memos (player_id INTEGER, memo_id INTEGER PRIMARY KEY AUTOINCREMENT, sender_id INTEGER NOT NULL, sender_phone INTEGER NOT NULL, sender_name TEXT, message TEXT, readed INTEGER NOT NULL DEFAULT 1, FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE)");
-			stmt.executeUpdate(createPlayerMemos);
-
-			String createPlayerEpisodeProgress = Database.sql(
-					"CREATE TABLE IF NOT EXISTS `player_episodeprogress` (player_id INT, episode_id INT PRIMARY KEY, FOREIGN KEY (`player_id`) REFERENCES `players` (`id`) ON DELETE CASCADE, INDEX idx_id (player_id)) ENGINE=InnoDB",
-					"CREATE TABLE IF NOT EXISTS player_episodeprogress (player_id INTEGER, episode_id INTEGER PRIMARY KEY, FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE)");
-			stmt.executeUpdate(createPlayerEpisodeProgress);
-
-			String createPlayerFriends = Database.sql(
-					"CREATE TABLE IF NOT EXISTS player_friends (player_id INT NOT NULL, friend_id INT NOT NULL, since TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (player_id, friend_id), FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE, INDEX idx_id (player_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
-					"CREATE TABLE IF NOT EXISTS player_friends (player_id INTEGER NOT NULL, friend_id INTEGER NOT NULL, since TEXT DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (player_id, friend_id), FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE)");
-			stmt.executeUpdate(createPlayerFriends);
-
-			String createIpBans = Database.sql(
-					"CREATE TABLE IF NOT EXISTS ip_bans (char_name VARCHAR(40) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci PRIMARY KEY, ip VARCHAR(16)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
-					"CREATE TABLE IF NOT EXISTS ip_bans (char_name TEXT PRIMARY KEY, ip TEXT)");
-			stmt.executeUpdate(createIpBans);
-
-			String createClubMembers = Database.sql(
-					"CREATE TABLE IF NOT EXISTS club_members (club_id INT NOT NULL, player_id INT NOT NULL, role int NOT NULL, remaining_memos INT NOT NULL DEFAULT 1, memo_reset_date DATE DEFAULT NULL, joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (club_id, player_id), FOREIGN KEY (club_id) REFERENCES clubs(id) ON DELETE CASCADE, FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE, INDEX idx_club_members_playerid (player_id)) ENGINE=InnoDB",
-					"CREATE TABLE IF NOT EXISTS club_members (club_id INTEGER NOT NULL, player_id INTEGER NOT NULL, role INTEGER NOT NULL, remaining_memos INTEGER NOT NULL DEFAULT 1, memo_reset_date TEXT DEFAULT NULL, joined_at TEXT DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (club_id, player_id), FOREIGN KEY (club_id) REFERENCES clubs(id) ON DELETE CASCADE, FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE)");
-			stmt.executeUpdate(createClubMembers);
-
-			String createApiKeys = Database.sql(
-					"CREATE TABLE IF NOT EXISTS api_keys (token VARCHAR(32), name VARCHAR(255) PRIMARY KEY, expire_date TIMESTAMP) ENGINE=InnoDB",
-					"CREATE TABLE IF NOT EXISTS api_keys (token TEXT, name TEXT PRIMARY KEY, expire_date TEXT)");
-			stmt.executeUpdate(createApiKeys);
-
-			String createPlayerGameModeData = Database.sql(
-					"CREATE TABLE IF NOT EXISTS player_gamemodedata (player_id INT NOT NULL, game_mode VARCHAR(32) NOT NULL, attr_key VARCHAR(64) NOT NULL, value JSON, FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE, UNIQUE KEY uniq_player_gamemode_key (player_id, game_mode, attr_key), INDEX idx_player (player_id)) ENGINE=InnoDB",
-					"CREATE TABLE IF NOT EXISTS player_gamemodedata (player_id INTEGER NOT NULL, game_mode TEXT NOT NULL, attr_key TEXT NOT NULL, value TEXT, FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE, UNIQUE(player_id, game_mode, attr_key))");
-			stmt.executeUpdate(createPlayerGameModeData);
 
 		}
 
